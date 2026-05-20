@@ -74,7 +74,7 @@ A modern **Full Stack EMI & Loan Management Web Application** that helps users m
 
 ### 📅 EMI Calendar
 
-![Calendar](./screenshots/Calendar.png)
+![Calendar](./screenshots/Calender.png)
 
 ---
 
