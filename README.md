@@ -54,23 +54,27 @@ A modern **Full Stack EMI & Loan Management Web Application** that helps users m
 
 ### 🔐 Login Page
 
-![Login](./screenshots/login.png)
+![Login](./screenshots/Loginn.png)
 
 ### 🏠 Dashboard
 
-![Dashboard](./screenshots/dashboard.png)
+![Dashboard](./screenshots/Dashboardd.png)
 
 ### ➕ Add Loan Page
 
-![Add Loan](./screenshots/add-loan.png)
+![Add Loan](./screenshots/AddLoan.png)
+
+### 💳 My Loans
+
+![My Loans](./screenshots/MyLoan.png)
 
 ### 🕐 Payment History
 
-![History](./screenshots/history.png)
+![History](./screenshots/History.png)
 
 ### 📅 EMI Calendar
 
-![Calendar](./screenshots/calendar.png)
+![Calendar](./screenshots/Calendar.png)
 
 ---
 
