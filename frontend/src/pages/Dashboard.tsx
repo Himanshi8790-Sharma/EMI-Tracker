@@ -492,7 +492,7 @@ export default function Dashboard() {
           {/* ── URGENT ALERTS ──────────────────────────────── */}
           {urgentLoans > 0 && (
             <div className="mb-5 space-y-2">
-              {dashboard?.upcomingLoans?.map((loan) => (
+              {dashboard?.upcomingLoans?.map((loan: any) => (
                 <div
                   key={loan.id}
                   className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm flex-wrap ${getAlertClass(loan.daysLeft)}`}
