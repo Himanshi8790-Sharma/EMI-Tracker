@@ -1,25 +1,37 @@
-# 💜 EMI Tracker App (Full Stack)
+# 💜 EMI Tracker App — Full Stack
 
-A modern **Full Stack EMI & Loan Management Web Application** that helps users manage their **loans, EMIs, payment history, due dates, and reminders** with a clean dashboard UI and smart tracking system.
+A modern **Full Stack EMI & Loan Management Web Application** designed to help users manage loans, EMIs, payment history, due dates, and reminders through a clean and responsive dashboard.
+
+## 🌐 Live Demo
+
+**Frontend:**  
+https://emi-tracker-omega.vercel.app/
+
+> Note: Production MySQL database configuration is pending. The application is fully deployed and ready for database connection.
 
 ---
 
 ## ✨ Features
 
-* ➕ Add & Manage Multiple Loans
-* 💳 EMI Tracking System
-* 📅 Due Date Management
-* 🕐 Payment History Page
-* 📱 WhatsApp Reminder Integration
-* 👤 Payer Management (Self / Parent / Friend / Other)
-* 📊 Dashboard with Loan Overview
-* 🎨 Colorful Loan Cards
-* 📱 Fully Responsive UI
-* 🔐 JWT Authentication System
-* 📂 CSV Export Feature
-* ⚡ REST API Integration
-* 🔎 Search & Filter Payments
-* 📌 Notes & Loan Details Support
+- ➕ Add and manage multiple loans
+- 💳 EMI tracking system
+- 📅 EMI due-date management
+- 🕐 Payment history
+- 📱 WhatsApp reminder integration
+- 👤 Payer management
+  - Self
+  - Parent
+  - Friend
+  - Other
+- 📊 Dashboard with loan overview
+- 🎨 Color-coded loan cards
+- 📱 Fully responsive UI
+- 🔐 JWT authentication
+- 📂 CSV export
+- ⚡ REST API integration
+- 🔎 Search and filter payments
+- 📝 Notes and loan details
+- 📅 EMI calendar
 
 ---
 
@@ -27,26 +39,33 @@ A modern **Full Stack EMI & Loan Management Web Application** that helps users m
 
 ### Frontend
 
-* Next.js
-* React.js
-* TypeScript
-* Tailwind CSS
-* TanStack Query
-* SweetAlert2
+- React.js
+- Vite
+- TypeScript
+- Tailwind CSS
+- TanStack Query
+- SweetAlert2
+- Axios
 
 ### Backend
 
-* Node.js
-* Express.js
-* REST API
+- Node.js
+- Express.js
+- REST API
+- JWT Authentication
+- bcrypt
 
 ### Database
 
-* MySQL
+- MySQL
+- mysql2
 
-### Authentication
+### Development Tools
 
-* JWT (JSON Web Token)
+- Git
+- GitHub
+- Vercel
+- VS Code
 
 ---
 
@@ -60,7 +79,7 @@ A modern **Full Stack EMI & Loan Management Web Application** that helps users m
 
 ![Dashboard](./screenshots/Dashboardd.png)
 
-### ➕ Add Loan Page
+### ➕ Add Loan
 
 ![Add Loan](./screenshots/AddLoan.png)
 
@@ -70,11 +89,11 @@ A modern **Full Stack EMI & Loan Management Web Application** that helps users m
 
 ### 🕐 Payment History
 
-![History](./screenshots/History.png)
+![Payment History](./screenshots/History.png)
 
 ### 📅 EMI Calendar
 
-![Calendar](./screenshots/Calender.png)
+![EMI Calendar](./screenshots/Calender.png)
 
 ---
 
@@ -82,116 +101,88 @@ A modern **Full Stack EMI & Loan Management Web Application** that helps users m
 
 ### 💳 Loan Management
 
-* Add new loans easily
-* Store EMI details
-* Track remaining EMIs
-* Monitor due dates
+Users can:
 
-### 👤 Payer System
+- Add new loans
+- Store loan and EMI details
+- Track remaining EMIs
+- Monitor upcoming due dates
+- View active and completed loans
 
-Users can assign EMI payer as:
+### 👤 Payer Management
 
-* Self
-* Parent
-* Friend
-* Other
+Each loan can be associated with:
 
-### 📊 Smart Dashboard
+- Self
+- Parent
+- Friend
+- Other
 
-* Total paid EMIs
-* Missed payments
-* Monthly overview
-* Average EMI stats
+Additional payer information such as name, phone number, and email can also be stored.
+
+### 📊 Dashboard
+
+The dashboard provides an overview of:
+
+- Total loans
+- EMI information
+- Upcoming EMIs
+- Payment status
+- Loan details
 
 ### 🕐 Payment History
 
-* Filter by month
-* Filter by payer
-* Search loan history
-* Export payment records in CSV
+Users can:
+
+- View EMI payment records
+- Search payment history
+- Filter records
+- Filter by payer
+- Export payment data as CSV
+
+### 📱 WhatsApp Reminder
+
+The application provides WhatsApp reminder functionality for EMI-related communication.
+
+### 📅 EMI Calendar
+
+Users can view upcoming EMI due dates through the calendar interface.
+
+---
+
+## 🔐 Authentication
+
+The application uses **JWT-based authentication** for secure user login and protected API access.
+
+Authentication flow:
+
+1. User Signup / Login
+2. Server validates credentials
+3. JWT token is generated
+4. Token is used for authenticated API requests
+5. Protected pages and API routes are accessed using authentication
 
 ---
 
 ## 🔄 Project Flow
 
-1. User Signup / Login
-2. JWT Authentication
-3. Redirect to Dashboard
-4. Add Loan Details
-5. Store Data in MySQL Database
-6. Track EMI Payments
-7. View Payment History
-8. Export Reports
-9. Logout Securely
-
----
-
-## 📂 Folder Structure
-
-```bash
-loan-tracker/
-│
-├── frontend/
-│   ├── app/
-│   ├── components/
-│   ├── utils/
-│
-├── backend/
-│   ├── routes/
-│   ├── controllers/
-│   ├── middleware/
-│   ├── config/
-│
-└── README.md
-```
-
----
-
-## ⚙️ Installation
-
-### Clone Repository
-
-```bash
-git clone https://github.com/Himanshi8790-Sharma/EMI-Tracker.git
-```
-
-### Install Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-### Install Backend
-
-```bash
-cd backend
-npm install
-npm start
-```
-
----
-
-## 🌸 Future Improvements
-
-* 🔔 EMI Reminder Notifications
-* 📧 Email Reminder System
-* 📈 Advanced Analytics
-* 🌙 Dark Mode
-* ☁️ Cloud Deployment
-
----
-
-## 👩‍💻 Developed By
-
-**Himanshi Sharma** 💜
-
-* GitHub: https://github.com/Himanshi8790-Sharma
-* LinkedIn: https://www.linkedin.com/in/himanshi-sharma-414b2a35b
-
----
-
-## ⭐ If you like this project
-
-Give this repository a ⭐ on GitHub and support the project 🚀💜
+```text
+User Signup / Login
+        ↓
+JWT Authentication
+        ↓
+Dashboard
+        ↓
+Add Loan
+        ↓
+Loan & EMI Data
+        ↓
+MySQL Database
+        ↓
+Track EMI Payments
+        ↓
+Payment History
+        ↓
+Reports / CSV Export
+        ↓
+EMI Reminders
