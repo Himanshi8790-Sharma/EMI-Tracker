@@ -1,9 +1,7 @@
-import cron from "node-cron";
 import db from "../config/db.js";
 
-// Daily 9 am run hoga
-cron.schedule("0 9 * * *",()=>{
-    // cron.schedule("* * * * *", () => {
+export const runReminderCheck = () =>
+    new Promise((resolve, reject) => {
     console.log("Running Reminder Job...");
 
     const query = `
@@ -14,8 +12,11 @@ cron.schedule("0 9 * * *",()=>{
     db.query(query,(err,loans)=>{
         if(err){
             console.log(err);
+            reject(err);
             return;
         }
+
+        let remindersFound = 0;
 
         loans.forEach((loan)=>{
             const today = new Date();
@@ -27,12 +28,13 @@ cron.schedule("0 9 * * *",()=>{
 
             // Condition
             if(diffDays === 3 || diffDays === 1){
+                remindersFound += 1;
                 console.log(
                     `Reminder: ${loan.loan_name} EMI due in ${diffDays} days`
                 );
-
-                
             }
-        })
-    })
-})
+        });
+
+        resolve({ loansChecked: loans.length, remindersFound });
+    });
+  });
