@@ -4,8 +4,7 @@ A modern **Full Stack EMI & Loan Management Web Application** designed to help u
 
 ## 🌐 Live Demo
 
-**Frontend:**  
-https://emi-tracker-omega.vercel.app/
+[🚀 View Live Demo](https://emi-tracker-omega.vercel.app/)
 
 > Note: Production MySQL database configuration is pending. The application is fully deployed and ready for database connection.
 
