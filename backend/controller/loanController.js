@@ -1,187 +1,205 @@
-import db from "../config/db.js";
+import prisma from "../config/prisma.js";
 
-// ADD loan = POST 
-export const addLoan = (req,res)=>{
-    const userId = req.user.id; //token s id lenege 
+// ADD LOAN = POST
+export const addLoan = async (req, res) => {
+  try {
+    const userId = req.user.id;
 
     const {
-        loan_name,
-        total_amount,
-        emi_amount,
-        total_emis,
-            remaining_emis,
-        interest_rate,
-        start_date,
-        next_due_date,
-        payer_type,
-        payer_name,
-        payer_phone,
-        payer_email,
-            color,
-        notes,
-    }= req.body;
-
-      // basic validation
-  if (!loan_name || !total_amount || !emi_amount || !total_emis || !next_due_date) {
-    return res.status(400).json({ message: "Required fields missing" });
-  }
-
-   const query = `
-    INSERT INTO loans 
-    (user_id, loan_name, total_amount, emi_amount, total_emis, remaining_emis,interest_rate, start_date, next_due_date, payer_type, payer_name, payer_phone, payer_email,  color,notes)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)
-  `;
-
-  db.query(query,
-    [
-      userId,
       loan_name,
       total_amount,
       emi_amount,
       total_emis,
-      remaining_emis || total_emis, // default to total_emis if not provided
-      interest_rate || null,
-      start_date || null,
+      remaining_emis,
+      interest_rate,
+      start_date,
       next_due_date,
-      payer_type || "self",
-      payer_name || null,
-      payer_phone || null,
-      payer_email || null,
-      color || "#7F77DD",
-      notes || null,
-    ],
-    (err,result)=>{
-        if(err){
-      // return res.status(500).json({ message: "Error adding loan" });
-      console.log("MYSQL ERROR:", err);
+      payer_type,
+      payer_name,
+      payer_phone,
+      payer_email,
+      color,
+      notes,
+    } = req.body;
 
-return res.status(500).json({
-  message: err.message,
-});
-
-        }
-        res.status(201).json({
-            message:"Loan added successfully ✅",
-          loanId: result.insertId,
-        })
-    }
-  )
-
-}
-
-// GET ALL LOANS
-export const getLoans = (req, res) => {
-  const userId = req.user.id;
-
-const query = `
-  SELECT 
-    *,
-    DATEDIFF(next_due_date, CURDATE()) AS daysLeft
-  FROM loans 
-  WHERE user_id = ? 
-  AND is_active = true
-  ORDER BY next_due_date ASC
-`;
-
-  db.query(query, [userId], (err, result) => {
-    if (err) {
-      return res.status(500).json({ message: "Error fetching loans" });
+    // Basic validation
+    if (
+      !loan_name ||
+      !total_amount ||
+      !emi_amount ||
+      !total_emis ||
+      !next_due_date
+    ) {
+      return res.status(400).json({
+        message: "Required fields missing",
+      });
     }
 
-    res.json({
-      count: result.length,
-      loans: result,
+    const loan = await prisma.loan.create({
+      data: {
+        userId: Number(userId),
+        loanName: loan_name,
+        totalAmount: total_amount,
+        emiAmount: emi_amount,
+        totalEmis: Number(total_emis),
+        remainingEmis: Number(remaining_emis || total_emis),
+        interestRate: interest_rate || null,
+
+        startDate: start_date ? new Date(start_date) : null,
+        nextDueDate: new Date(next_due_date),
+
+        payerType: payer_type || "self",
+        payerName: payer_name || null,
+        payerPhone: payer_phone || null,
+        payerEmail: payer_email || null,
+
+        color: color || "#7F77DD",
+        notes: notes || null,
+
+        isActive: true,
+      },
     });
-  });
+
+    res.status(201).json({
+      message: "Loan added successfully ✅",
+      loanId: loan.id,
+    });
+  } catch (err) {
+    console.error("ADD LOAN ERROR:", err);
+
+    res.status(500).json({
+      message: err.message,
+    });
+  }
 };
 
-// Get specific loan GET
-export const getSingleLoan = (req,res)=>{
-    const userId = req.user.id;
-    const loanId = req.params.id;
+// GET ALL LOANS
+export const getLoans = async (req, res) => {
+  try {
+    const userId = Number(req.user.id);
 
+    const loans = await prisma.loan.findMany({
+      where: {
+        userId,
+        isActive: true,
+      },
+      orderBy: {
+        nextDueDate: "asc",
+      },
+    });
 
-  const query = `
-    SELECT 
-      id,
-      loan_name,
-      total_amount,
-      emi_amount,
-      total_emis,
-      interest_rate,
-      start_date,
-      next_due_date,
-      payer_type,
-      payer_name,
-      payer_phone,
-      payer_email,
-      notes,
-      is_active,
-      created_at,
-      DATEDIFF(next_due_date, CURDATE()) AS  daysLeft
-    FROM loans
-    WHERE id = ? AND user_id = ?
-  `;
+    const today = new Date();
 
+    const formattedLoans = loans.map((loan) => {
+      const nextDueDate = loan.nextDueDate
+        ? new Date(loan.nextDueDate)
+        : null;
 
-  db.query(query, [loanId, userId], (err, result) => {
-    if (err) {
-      return res.status(500).json({ message: "Error fetching loan" });
+      let daysLeft = null;
+
+      if (nextDueDate) {
+        const todayDate = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate()
+        );
+
+        const dueDate = new Date(
+          nextDueDate.getFullYear(),
+          nextDueDate.getMonth(),
+          nextDueDate.getDate()
+        );
+
+        daysLeft = Math.ceil(
+          (dueDate - todayDate) / (1000 * 60 * 60 * 24)
+        );
+      }
+
+      return {
+        ...loan,
+        daysLeft,
+      };
+    });
+
+    res.json({
+      count: formattedLoans.length,
+      loans: formattedLoans,
+    });
+  } catch (err) {
+    console.error("GET LOANS ERROR:", err);
+
+    res.status(500).json({
+      message: "Error fetching loans",
+    });
+  }
+};
+
+// GET SINGLE LOAN
+export const getSingleLoan = async (req, res) => {
+  try {
+    const userId = Number(req.user.id);
+    const loanId = Number(req.params.id);
+
+    const loan = await prisma.loan.findFirst({
+      where: {
+        id: loanId,
+        userId,
+      },
+    });
+
+    if (!loan) {
+      return res.status(404).json({
+        message: "Loan not found",
+      });
     }
 
-    if (result.length === 0) {
-      return res.status(404).json({ message: "Loan not found" });
+    let daysLeft = null;
+
+    if (loan.nextDueDate) {
+      const today = new Date();
+
+      const todayDate = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate()
+      );
+
+      const dueDate = new Date(
+        loan.nextDueDate.getFullYear(),
+        loan.nextDueDate.getMonth(),
+        loan.nextDueDate.getDate()
+      );
+
+      daysLeft = Math.ceil(
+        (dueDate - todayDate) / (1000 * 60 * 60 * 24)
+      );
     }
 
     res.json({
-      loan: result[0],
+      loan: {
+        ...loan,
+        daysLeft,
+      },
     });
-  });
-}
+  } catch (err) {
+    console.error("GET SINGLE LOAN ERROR:", err);
 
-// Update loan Put
-export const updateLoan = (req,res)=>{
-console.log("BODY:", req.body);
-console.log("PARAMS:", req.params);
+    res.status(500).json({
+      message: "Error fetching loan",
+    });
+  }
+};
 
-    const userId = req.user.id;
-    const loanId = req.params.id;
+// UPDATE LOAN = PUT
+export const updateLoan = async (req, res) => {
+  try {
+    console.log("BODY:", req.body);
+    console.log("PARAMS:", req.params);
 
-    
-  const {
-    loan_name,
-    total_amount,
-    emi_amount,
-    total_emis,
-    interest_rate,
-    start_date,
-    next_due_date,
-    payer_type,
-    payer_name,
-    payer_phone,
-    payer_email,
-    notes,
-  } = req.body;
+    const userId = Number(req.user.id);
+    const loanId = Number(req.params.id);
 
-
-  const query = `
-    UPDATE loans SET
-      loan_name = ?,
-      total_amount = ?,
-      emi_amount = ?,
-      total_emis = ?,
-      interest_rate = ?,
-      start_date = ?,
-      next_due_date = ?,
-      payer_type = ?,
-      payer_name = ?,
-      payer_phone = ?,
-      payer_email = ?,
-      notes = ?
-    WHERE id = ? AND user_id = ?
-  `;
-
-  db.query(query,[
+    const {
       loan_name,
       total_amount,
       emi_amount,
@@ -194,50 +212,143 @@ console.log("PARAMS:", req.params);
       payer_phone,
       payer_email,
       notes,
-      loanId,
-      userId,
-    ],(err,result)=>{
-         if (err) {
+    } = req.body;
 
-    console.log("MYSQL ERROR:", err);
-        return res.status(500).json({ message: err.message });
-      }
+    const existingLoan = await prisma.loan.findFirst({
+      where: {
+        id: loanId,
+        userId,
+      },
+    });
 
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ message: "Loan not found" });
-      }
-
-      res.json({ message: "Loan updated successfully ✅" });
-    
-
-  })
-}
-
-// Delete Loan
-export const deleteLoan = (req,res)=>{
-    const userId = req.user.id;
-    const loanId = req.params.id;
-
-     const query = `
-    UPDATE loans 
-    SET is_active = false 
-    WHERE id = ? AND user_id = ?
-  `;
-
-  db.query(query, [loanId, userId], (err, result) => {
-    if (err) {
-      return res.status(500).json({ message: "Error deleting loan" });
+    if (!existingLoan) {
+      return res.status(404).json({
+        message: "Loan not found",
+      });
     }
 
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: "Loan not found" });
+    await prisma.loan.update({
+      where: {
+        id: loanId,
+      },
+      data: {
+        loanName: loan_name,
+        totalAmount: total_amount,
+        emiAmount: emi_amount,
+        totalEmis: Number(total_emis),
+        interestRate: interest_rate || null,
+
+        startDate: start_date ? new Date(start_date) : null,
+        nextDueDate: next_due_date
+          ? new Date(next_due_date)
+          : null,
+
+        payerType: payer_type,
+        payerName: payer_name || null,
+        payerPhone: payer_phone || null,
+        payerEmail: payer_email || null,
+
+        notes: notes || null,
+      },
+    });
+
+    res.json({
+      message: "Loan updated successfully ✅",
+    });
+  } catch (err) {
+    console.error("UPDATE LOAN ERROR:", err);
+
+    res.status(500).json({
+      message: err.message,
+    });
+  }
+};
+
+// DELETE LOAN
+export const deleteLoan = async (req, res) => {
+  try {
+    const userId = Number(req.user.id);
+    const loanId = Number(req.params.id);
+
+    const existingLoan = await prisma.loan.findFirst({
+      where: {
+        id: loanId,
+        userId,
+      },
+    });
+
+    if (!existingLoan) {
+      return res.status(404).json({
+        message: "Loan not found",
+      });
     }
 
-    res.json({ message: "Loan deleted successfully 🗑️" });
-  });
-}
+    await prisma.loan.update({
+      where: {
+        id: loanId,
+      },
+      data: {
+        isActive: false,
+      },
+    });
 
+    res.json({
+      message: "Loan deleted successfully 🗑️",
+    });
+  } catch (err) {
+    console.error("DELETE LOAN ERROR:", err);
 
+    res.status(500).json({
+      message: "Error deleting loan",
+    });
+  }
+};
 
+// MARK EMI AS PAID
+export const markAsPaid = async (req, res) => {
+  try {
+    const loanId = Number(req.params.id);
 
+    const loan = await prisma.loan.findUnique({
+      where: {
+        id: loanId,
+      },
+    });
 
+    if (!loan || !loan.remainingEmis || loan.remainingEmis <= 0) {
+      return res.status(404).json({
+        message: "Loan not found",
+      });
+    }
+
+    const newRemainingEmis = loan.remainingEmis - 1;
+
+    let newNextDueDate = loan.nextDueDate;
+
+    if (loan.nextDueDate) {
+      newNextDueDate = new Date(loan.nextDueDate);
+      newNextDueDate.setMonth(newNextDueDate.getMonth() + 1);
+    }
+
+    await prisma.loan.update({
+      where: {
+        id: loanId,
+      },
+      data: {
+        remainingEmis: newRemainingEmis,
+        nextDueDate: newNextDueDate,
+        isActive: newRemainingEmis > 0,
+      },
+    });
+
+    res.json({
+      message: "EMI marked as paid ✅",
+    });
+  } catch (err) {
+    console.error("MARK AS PAID ERROR:", err);
+
+    res.status(500).json({
+      message: "Error updating loan",
+    });
+  }
+};

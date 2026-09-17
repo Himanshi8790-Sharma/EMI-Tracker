@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum PaymentStatus {
+  paid
+  missed
+}
+
+model User {
+  id           Int        @id @default(autoincrement())
+  name         String?    @db.VarChar(100)
+  email        String     @unique @db.VarChar(150)
+  phone        String?    @db.VarChar(15)
+  passwordHash String?    @map("password_hash") @db.VarChar(255)
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  loans        Loan[]
+  reminders    Reminder[]
+
+  @@map("users")
+}
+
+model Loan {
+  id            Int        @id @default(autoincrement())
+  userId        Int?       @map("user_id")
+  loanName      String?    @map("loan_name") @db.VarChar(100)
+  totalAmount   Decimal?   @map("total_amount") @db.Decimal(10, 2)
+  emiAmount     Decimal?   @map("emi_amount") @db.Decimal(10, 2)
+  totalEmis     Int?       @map("total_emis")
+  interestRate  Decimal?   @map("interest_rate") @db.Decimal(5, 2)
+  startDate     DateTime?  @map("start_date") @db.Date
+  nextDueDate   DateTime?  @map("next_due_date") @db.Date
+  payerType     String?    @map("payer_type") @db.VarChar(50)
+  payerName     String?    @map("payer_name") @db.VarChar(100)
+  payerPhone    String?    @map("payer_phone") @db.VarChar(15)
+  payerEmail    String?    @map("payer_email") @db.VarChar(150)
+  notes         String?    @db.Text
+  isActive      Boolean?   @map("is_active")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  remainingEmis Int?       @map("remaining_emis")
+  color         String?    @db.VarChar(20)
+
+  user          User?      @relation(fields: [userId], references: [id])
+  payments      Payment[]
+  reminders     Reminder[]
+
+  @@map("loans")
+}
+
+model Payment {
+  id          Int           @id @default(autoincrement())
+  loanId      Int?          @map("loan_id")
+  amountPaid  Decimal?      @map("amount_paid") @db.Decimal(10, 2)
+  emiNumber   Int?          @map("emi_number")
+  paidBy      String?       @map("paid_by") @db.VarChar(100)
+  paymentDate DateTime?     @map("payment_date") @db.Date
+  notes       String?       @db.Text
+  status      PaymentStatus @default(paid)
+
+  loan        Loan?         @relation(fields: [loanId], references: [id])
+
+  @@map("payments")
+}
+
+model Reminder {
+  id           Int      @id @default(autoincrement())
+  loanId       Int?     @map("loan_id")
+  userId       Int?     @map("user_id")
+  reminderType String?  @map("reminder_type") @db.VarChar(50)
+  sentTo       String?  @map("sent_to") @db.VarChar(150)
+  sentAt       DateTime @default(now()) @map("sent_at")
+  status       String?  @db.VarChar(50)
+
+  loan         Loan?    @relation(fields: [loanId], references: [id])
+  user         User?    @relation(fields: [userId], references: [id])
+
+  @@map("reminders")
+}

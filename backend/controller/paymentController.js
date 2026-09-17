@@ -1,128 +1,158 @@
-import db from "../config/db.js";
+import prisma from "../config/prisma.js";
 
-// payemnt mark krne ki POST
-export const addPayment = (req, res) => {
-  const userId = req.user.id;
+// ADD PAYMENT
+export const addPayment = async (req, res) => {
+  try {
+    const userId = Number(req.user.id);
 
-  const { loan_id, amount_paid, emi_number, paid_by, payment_date, notes } = req.body;
+    const {
+      loan_id,
+      amount_paid,
+      emi_number,
+      paid_by,
+      payment_date,
+      notes,
+    } = req.body;
 
+    const loanId = Number(loan_id);
 
-const formattedDate = payment_date
-  ? payment_date.split("T")[0]
-  : new Date().toISOString().split("T")[0];
+    const formattedDate = payment_date
+      ? new Date(payment_date)
+      : new Date();
 
-  // 🔐 Loan check
-  const checkLoanQuery = "SELECT * FROM loans WHERE id = ? AND user_id = ?";
+    // Loan check
+    const loan = await prisma.loan.findFirst({
+      where: {
+        id: loanId,
+        userId,
+      },
+    });
 
- db.query(checkLoanQuery, [loan_id, userId], (err, loanResult) => {
-  if (err) {
-    return res.status(500).json({ message: "DB error" });
-  }
-
-  if (loanResult.length === 0) {
-    return res.status(403).json({ message: "Unauthorized ❌" });
-  }
-
-    const insertQuery = `
-      INSERT INTO payments 
-      (loan_id, amount_paid, emi_number, paid_by, payment_date, notes)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `;
-
-    db.query(
-      insertQuery,
-      [loan_id, amount_paid, emi_number, paid_by, formattedDate, notes],
-      (err, result) => {
-        if (err) {
-          console.log("PAYMENT ERROR:", err);
-
-return res.status(500).json({
-  message: err.message,
-});
-          // return res.status(500).json({ message: "Error adding payment" });
-        }
-
-        const updateLoanQuery = `
-          UPDATE loans 
-          SET next_due_date = DATE_ADD(next_due_date, INTERVAL 1 MONTH)
-          WHERE id = ? AND user_id = ?
-        `;
-
-        db.query(updateLoanQuery, [loan_id, userId]);
-
-        res.status(201).json({
-          message: "Payment added ✅",
-        });
-      }
-    );
-  });
-};
-
-// get single loan history
-
-export const getLoanPayments = (req, res) => {
-const loanId = req.params.loanId;
-
-  const query = `
-    SELECT * FROM payments
-    WHERE loan_id = ?
-    ORDER BY payment_date DESC
-  `;
-
-  db.query(query, [loanId], (err, result) => {
-    if (err) {
-      return res.status(500).json({ message: "Error fetching payments" });
+    if (!loan) {
+      return res.status(403).json({
+        message: "Unauthorized ❌",
+      });
     }
 
-    res.json({
-      count: result.length,
-      payments: result,
+    // Create payment
+    await prisma.payment.create({
+      data: {
+        loanId,
+        amountPaid: amount_paid,
+        emiNumber: emi_number ? Number(emi_number) : null,
+        paidBy: paid_by || null,
+        paymentDate: formattedDate,
+        notes: notes || null,
+        status: "paid",
+      },
     });
-  });
-};
 
+    // Update next due date
+    let nextDueDate = loan.nextDueDate;
 
-// GET All Payments (User level) 
-
-export const getAllPayments  = (req,res)=>{
-    const userId = req.user.id;
-const query = `
-  SELECT 
-    p.*,
-    l.loan_name AS loanName,
-    l.color AS loanColor,
-    l.payer_type AS payerType
-  FROM payments p
-  JOIN loans l ON p.loan_id = l.id
-  WHERE l.user_id = ?
-  ORDER BY p.payment_date DESC
-`;
-  db.query(query, [userId], (err, result) => {
-    if (err) {
-      return res.status(500).json({ message: "Error fetching payments" });
+    if (nextDueDate) {
+      nextDueDate = new Date(nextDueDate);
+      nextDueDate.setMonth(nextDueDate.getMonth() + 1);
     }
 
-    res.json({
-      count: result.length,
-      payments: result,
+    await prisma.loan.update({
+      where: {
+        id: loanId,
+      },
+      data: {
+        nextDueDate,
+      },
     });
-  });
-}
 
+    res.status(201).json({
+      message: "Payment added ✅",
+    });
+  } catch (err) {
+    console.error("PAYMENT ERROR:", err);
 
+    res.status(500).json({
+      message: err.message,
+    });
+  }
+};
 
+// GET SINGLE LOAN PAYMENT HISTORY
+export const getLoanPayments = async (req, res) => {
+  try {
+    const loanId = Number(req.params.loanId);
 
+    const payments = await prisma.payment.findMany({
+      where: {
+        loanId,
+      },
+      orderBy: {
+        paymentDate: "desc",
+      },
+    });
 
+    res.json({
+      count: payments.length,
+      payments,
+    });
+  } catch (err) {
+    console.error("GET LOAN PAYMENTS ERROR:", err);
 
+    res.status(500).json({
+      message: "Error fetching payments",
+    });
+  }
+};
 
+// GET ALL PAYMENTS
+export const getAllPayments = async (req, res) => {
+  try {
+    const userId = Number(req.user.id);
 
+    const payments = await prisma.payment.findMany({
+      where: {
+        loan: {
+          userId,
+        },
+      },
+      include: {
+        loan: {
+          select: {
+            loanName: true,
+            color: true,
+            payerType: true,
+          },
+        },
+      },
+      orderBy: {
+        paymentDate: "desc",
+      },
+    });
 
+    const formattedPayments = payments.map((payment) => ({
+      id: payment.id,
+      loanId: payment.loanId,
+      amountPaid: payment.amountPaid,
+      emiNumber: payment.emiNumber,
+      paidBy: payment.paidBy,
+      paymentDate: payment.paymentDate,
+      notes: payment.notes,
+      status: payment.status,
 
+      // Same names as old MySQL aliases
+      loanName: payment.loan?.loanName,
+      loanColor: payment.loan?.color,
+      payerType: payment.loan?.payerType,
+    }));
 
+    res.json({
+      count: formattedPayments.length,
+      payments: formattedPayments,
+    });
+  } catch (err) {
+    console.error("GET ALL PAYMENTS ERROR:", err);
 
-
-
-
-
-
-
+    res.status(500).json({
+      message: "Error fetching payments",
+    });
+  }
+};

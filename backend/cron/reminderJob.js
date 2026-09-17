@@ -1,40 +1,59 @@
-import db from "../config/db.js";
+import prisma from "../config/prisma.js";
 
-export const runReminderCheck = () =>
-    new Promise((resolve, reject) => {
+export const runReminderCheck = async () => {
+  try {
     console.log("Running Reminder Job...");
 
-    const query = `
-    SELECT * FROM loans 
-    WHERE is_active = true
-    `;
-
-    db.query(query,(err,loans)=>{
-        if(err){
-            console.log(err);
-            reject(err);
-            return;
-        }
-
-        let remindersFound = 0;
-
-        loans.forEach((loan)=>{
-            const today = new Date();
-            const dueDate = new Date(loan.next_due_date);
-
-            const diffDays = Math.ceil(
-                (dueDate - today) / (1000 * 60 * 60 * 24)
-            );
-
-            // Condition
-            if(diffDays === 3 || diffDays === 1){
-                remindersFound += 1;
-                console.log(
-                    `Reminder: ${loan.loan_name} EMI due in ${diffDays} days`
-                );
-            }
-        });
-
-        resolve({ loansChecked: loans.length, remindersFound });
+    const loans = await prisma.loan.findMany({
+      where: {
+        isActive: true,
+      },
     });
-  });
+
+    let remindersFound = 0;
+
+    for (const loan of loans) {
+      if (!loan.nextDueDate) {
+        continue;
+      }
+
+      const today = new Date();
+
+      const todayDate = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate()
+      );
+
+      const dueDate = new Date(loan.nextDueDate);
+
+      const dueDateOnly = new Date(
+        dueDate.getFullYear(),
+        dueDate.getMonth(),
+        dueDate.getDate()
+      );
+
+      const diffDays = Math.ceil(
+        (dueDateOnly - todayDate) /
+          (1000 * 60 * 60 * 24)
+      );
+
+      // Existing condition: 3 days or 1 day before EMI
+      if (diffDays === 3 || diffDays === 1) {
+        remindersFound += 1;
+
+        console.log(
+          `Reminder: ${loan.loanName} EMI due in ${diffDays} days`
+        );
+      }
+    }
+
+    return {
+      loansChecked: loans.length,
+      remindersFound,
+    };
+  } catch (err) {
+    console.error("REMINDER JOB ERROR:", err);
+    throw err;
+  }
+};

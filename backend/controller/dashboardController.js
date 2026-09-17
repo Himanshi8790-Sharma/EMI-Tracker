@@ -1,114 +1,187 @@
-import db from "../config/db.js";
+import prisma from "../config/prisma.js";
 
-export const getDashboard = (req, res) => {
-  const userId = req.user.id;
+export const getDashboard = async (req, res) => {
+  try {
+    const userId = Number(req.user.id);
 
-  // 🔹 Summary Query
-  const summaryQuery = `
-    SELECT 
-      COUNT(*) AS total_loans,
+    const loans = await prisma.loan.findMany({
+      where: {
+        userId,
+        isActive: true,
+      },
+      orderBy: {
+        nextDueDate: "asc",
+      },
+    });
 
-      SUM(
-        CASE 
-          WHEN MONTH(next_due_date) = MONTH(CURDATE()) 
-          AND YEAR(next_due_date) = YEAR(CURDATE())
-          THEN emi_amount
-          ELSE 0
-        END
-      ) AS total_due_this_month,
+    const now = new Date();
 
-      SUM(emi_amount * total_emis) AS total_pending,
+    const startOfMonth = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      1
+    );
 
-      SUM(
-        CASE 
-          WHEN DATEDIFF(next_due_date, CURDATE()) BETWEEN 0 AND 7
-          THEN 1
-          ELSE 0
-        END
-      ) AS upcoming_loans,
+    const endOfMonth = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999
+    );
 
-      SUM(
-        CASE 
-          WHEN DATEDIFF(next_due_date, CURDATE()) <= 3
-          THEN 1
-          ELSE 0
-        END
-      ) AS urgent_loans
+    const today = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate()
+    );
 
-    FROM loans
-    WHERE user_id = ? AND is_active = true
-  `;
+    let totalEmiThisMonth = 0;
+    let totalPending = 0;
+    let upcomingLoansCount = 0;
+    let urgentLoansCount = 0;
 
-  // 🔹 Upcoming Loans List
-  const loansQuery = `
-    SELECT 
-      id,
-      loan_name,
-      emi_amount,
-      next_due_date,
-      payer_name,
-      payer_type,
-      total_emis,
-      total_amount,
-      interest_rate,
-      DATEDIFF(next_due_date, CURDATE()) AS daysLeft
-    FROM loans
-    WHERE user_id = ? AND is_active = true
-    ORDER BY next_due_date ASC
-    LIMIT 5
-  `;
+    const upcomingLoans = [];
 
-  db.query(summaryQuery, [userId], (err, summaryResult) => {
-    if (err) {
-      return res.status(500).json({ message: "Error fetching summary" });
-    }
-
-    db.query(loansQuery, [userId], (err, loansResult) => {
-      if (err) {
-        return res.status(500).json({ message: "Error fetching loans" });
+    for (const loan of loans) {
+      // Total pending
+      if (loan.emiAmount && loan.totalEmis) {
+        totalPending +=
+          Number(loan.emiAmount) * Number(loan.totalEmis);
       }
 
-      res.json({
-        totalLoans: summaryResult[0].total_loans,
-        totalEmiThisMonth: summaryResult[0].total_due_this_month,
-        totalPending: summaryResult[0].total_pending,
-        upcomingLoansCount: summaryResult[0].upcoming_loans,
-        urgentLoansCount: summaryResult[0].urgent_loans,
-        upcomingLoans: loansResult,
-      });
+      if (loan.nextDueDate) {
+        const dueDate = new Date(loan.nextDueDate);
+
+        const dueDateOnly = new Date(
+          dueDate.getFullYear(),
+          dueDate.getMonth(),
+          dueDate.getDate()
+        );
+
+        // EMI due this month
+        if (
+          dueDateOnly >= startOfMonth &&
+          dueDateOnly <= endOfMonth
+        ) {
+          totalEmiThisMonth += Number(loan.emiAmount || 0);
+        }
+
+        // Days left
+        const daysLeft = Math.ceil(
+          (dueDateOnly - today) /
+            (1000 * 60 * 60 * 24)
+        );
+
+        // Upcoming loans: 0 to 7 days
+        if (daysLeft >= 0 && daysLeft <= 7) {
+          upcomingLoansCount++;
+        }
+
+        // Urgent loans: <= 3 days
+        if (daysLeft <= 3) {
+          urgentLoansCount++;
+        }
+
+        // Upcoming loans list
+        upcomingLoans.push({
+          id: loan.id,
+          loan_name: loan.loanName,
+          emi_amount: loan.emiAmount,
+          next_due_date: loan.nextDueDate,
+          payer_name: loan.payerName,
+          payer_type: loan.payerType,
+          total_emis: loan.totalEmis,
+          total_amount: loan.totalAmount,
+          interest_rate: loan.interestRate,
+          daysLeft,
+        });
+      } else {
+        upcomingLoans.push({
+          id: loan.id,
+          loan_name: loan.loanName,
+          emi_amount: loan.emiAmount,
+          next_due_date: loan.nextDueDate,
+          payer_name: loan.payerName,
+          payer_type: loan.payerType,
+          total_emis: loan.totalEmis,
+          total_amount: loan.totalAmount,
+          interest_rate: loan.interestRate,
+          daysLeft: null,
+        });
+      }
+    }
+
+    // Same LIMIT 5 as old MySQL query
+    upcomingLoans.splice(5);
+
+    res.json({
+      totalLoans: loans.length,
+      totalEmiThisMonth,
+      totalPending,
+      upcomingLoansCount,
+      urgentLoansCount,
+      upcomingLoans,
     });
-  });
+  } catch (err) {
+    console.error("DASHBOARD ERROR:", err);
+
+    res.status(500).json({
+      message: "Error fetching dashboard",
+    });
+  }
 };
 
+// PATCH - Mark EMI as Paid
+export const markAsPaid = async (req, res) => {
+  try {
+    const loanId = Number(req.params.id);
 
-// PATCH marked api
-export const markAsPaid = (req, res) => {
-  const loanId = req.params.id;
+    const loan = await prisma.loan.findUnique({
+      where: {
+        id: loanId,
+      },
+    });
 
-  const query = `
-    UPDATE loans
-    SET
-      remaining_emis = remaining_emis - 1,
-
-      next_due_date = DATE_ADD(next_due_date, INTERVAL 1 MONTH),
-
-      is_active = CASE
-        WHEN remaining_emis - 1 <= 0 THEN false
-        ELSE true
-      END
-
-    WHERE id = ? AND remaining_emis > 0
-  `;
-
-  db.query(query, [loanId], (err, result) => {
-    if (err) {
-      return res.status(500).json({
-        message: "Error updating loan",
+    if (!loan || !loan.remainingEmis || loan.remainingEmis <= 0) {
+      return res.status(404).json({
+        message: "Loan not found",
       });
     }
+
+    const newRemainingEmis = loan.remainingEmis - 1;
+
+    let newNextDueDate = loan.nextDueDate;
+
+    if (loan.nextDueDate) {
+      newNextDueDate = new Date(loan.nextDueDate);
+
+      newNextDueDate.setMonth(
+        newNextDueDate.getMonth() + 1
+      );
+    }
+
+    await prisma.loan.update({
+      where: {
+        id: loanId,
+      },
+      data: {
+        remainingEmis: newRemainingEmis,
+        nextDueDate: newNextDueDate,
+        isActive: newRemainingEmis > 0,
+      },
+    });
 
     res.json({
       message: "EMI marked as paid ✅",
     });
-  });
+  } catch (err) {
+    console.error("MARK AS PAID ERROR:", err);
+
+    res.status(500).json({
+      message: "Error updating loan",
+    });
+  }
 };

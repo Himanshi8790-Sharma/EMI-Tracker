@@ -6,6 +6,8 @@ import loanRoutes from "./routes/loanRoutes.js";
 import paymentRoutes from "./routes/paymentRoute.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import reminderRoutes from "./routes/reminderRoutes.js";
+import swaggerUi from "swagger-ui-express";
+import swaggerSpec from "./swagger.js";
 
 const app = express();
 
@@ -15,6 +17,8 @@ const corsOptions = process.env.FRONTEND_ORIGIN
 
 app.use(cors(corsOptions));
 app.use(express.json());
+
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/loans", loanRoutes);
