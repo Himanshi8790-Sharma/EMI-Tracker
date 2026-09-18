@@ -116,7 +116,25 @@ export const getLoans = async (req, res) => {
       }
 
       return {
-        ...loan,
+        id: loan.id,
+        loan_name: loan.loanName,
+        total_amount: Number(loan.totalAmount),
+        emi_amount: Number(loan.emiAmount),
+        total_emis: Number(loan.totalEmis),
+        remaining_emis: Number(loan.remainingEmis),
+        interest_rate: loan.interestRate
+          ? Number(loan.interestRate)
+          : null,
+        start_date: loan.startDate,
+        next_due_date: loan.nextDueDate,
+        payer_type: loan.payerType,
+        payer_name: loan.payerName,
+        payer_phone: loan.payerPhone,
+        payer_email: loan.payerEmail,
+        color: loan.color,
+        notes: loan.notes,
+        is_active: loan.isActive,
+        created_at: loan.createdAt,
         daysLeft,
       };
     });
