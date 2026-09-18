@@ -11,11 +11,16 @@ import swaggerSpec from "./swagger.js";
 
 const app = express();
 
-const corsOptions = process.env.FRONTEND_ORIGIN
-  ? { origin: process.env.FRONTEND_ORIGIN }
-  : undefined;
+const allowedOrigin =
+  process.env.FRONTEND_ORIGIN || "https://emi-tracker-omega.vercel.app";
 
-app.use(cors(corsOptions));
+app.use(
+  cors({
+    origin: allowedOrigin,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 app.use(express.json());
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
