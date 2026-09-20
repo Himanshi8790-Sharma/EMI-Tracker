@@ -135,15 +135,15 @@ localStorage.setItem("kist_token", res.data.token);
     mutationFn: (data: typeof signupData) => API.post("/auth/register", data),
 
     onSuccess: () => {
+      localStorage.removeItem("kist_token");
+      localStorage.removeItem("kist_user");
+
       Swal.fire({
         icon: "success",
         title: "Account Created 🎉",
         text: "Now login to continue",
-      })
-      // .then(() => {
-      //   setMode("login"); // 👈 best practice
-      // });
-      navigate("/dashboard"); // ✅ directly navigate to dashboard after signup (optional)
+      });
+      switchTo("login");
     },
 
     onError: (err: any) => {
