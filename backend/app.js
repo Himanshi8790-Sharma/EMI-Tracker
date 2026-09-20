@@ -14,6 +14,8 @@ const app = express();
 const allowedOrigin =
   process.env.FRONTEND_ORIGIN || "https://emi-tracker-omega.vercel.app";
 
+  console.log("Allowed Origin:", allowedOrigin);
+
 app.use(
   cors({
     origin: allowedOrigin,
