@@ -79,7 +79,21 @@ export const addPayment = async (req, res) => {
 // GET SINGLE LOAN PAYMENT HISTORY
 export const getLoanPayments = async (req, res) => {
   try {
+    const userId = Number(req.user.id);
     const loanId = Number(req.params.loanId);
+
+    const loan = await prisma.loan.findUnique({
+      where: {
+        id: loanId,
+        userId,
+      },
+    });
+
+    if (!loan) {
+      return res.status(404).json({
+        message: "Loan not found",
+      });
+    }
 
     const payments = await prisma.payment.findMany({
       where: {

@@ -137,11 +137,13 @@ export const getDashboard = async (req, res) => {
 // PATCH - Mark EMI as Paid
 export const markAsPaid = async (req, res) => {
   try {
+    const userId = Number(req.user.id);
     const loanId = Number(req.params.id);
 
     const loan = await prisma.loan.findUnique({
       where: {
         id: loanId,
+        userId,
       },
     });
 
